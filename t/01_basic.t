@@ -4,12 +4,16 @@ use Test::More;
 
 is_deeply Mock->foo({name => 'nekokak'}), +{name => 'nekokak'};
 is_deeply Mock->foo({name => 'nekokak', age => 32}), +{name => 'nekokak', age => 32};
-is_deeply Mock->foo({name => 'nekokak', age => 32, nick => 'inukaku'}), +{name => 'nekokak', age => 32};
+
+eval {
+    Mock->foo({name => 'nekokak', age => 32, nick => 'inukaku'});
+};
+like $@, qr/not listed in the following parameter: nick./;
 
 eval {
     Mock->foo({age => 32});
 };
-like $@, qr/name required!/;
+like $@, qr/Mandatory parameter 'name' missing./;
 
 eval {
     Mock->bar({age => 32});
