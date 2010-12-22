@@ -1,11 +1,12 @@
 package Sub::Args;
 use strict;
 use warnings;
+use 5.008001;
 use Exporter 'import';
 our @EXPORT = qw( args );
 use Carp ();
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 sub args {
     my $rule = shift;
@@ -34,6 +35,11 @@ sub args {
 
     map {(not defined $rule->{$_}) ? Carp::confess "not listed in the following parameter: $_.": () } keys %$caller_args;
 
+    for my $k (keys %$rule) {
+        $caller_args->{$k} = undef unless exists $caller_args->{$k};
+    }
+
+    Internals::SvREADONLY %$caller_args, 1;
     $caller_args;
 }
 
@@ -82,6 +88,14 @@ Sub::Args - Simple check/get arguments.
           nick => 'inukaku',
       }
   );
+  # or
+  my $args = Your::Class->foo(
+      {
+          name => 'nekokak',
+          age  => 32,
+      }
+  );
+  $args->{nick}; # for die.
   
   # name arguments must required. for die.
   Your::Class->foo(
@@ -89,6 +103,7 @@ Sub::Args - Simple check/get arguments.
           age => 32,
       }
   );
+
 
 or
 
