@@ -3,10 +3,10 @@ use strict;
 use warnings;
 use 5.008001;
 use Exporter 'import';
-our @EXPORT = qw( args );
+our @EXPORT = qw( args args_pos );
 use Carp ();
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 sub args {
     my $rule = shift;
@@ -21,17 +21,16 @@ sub args {
     unless (keys %$caller_args) {
         package DB;
         () = caller(1);
-        my @args = @DB::args;
 
-        shift @args if $invocant eq $args[0];
+        shift @DB::args if $invocant eq $DB::args[0];
 
-        if (ref($args[0]) eq 'HASH') {
-            $caller_args = $args[0];
+        if (ref($DB::args[0]) eq 'HASH') {
+            $caller_args = $DB::args[0];
         } else {
-            if (scalar(@args) % 2 == 1 ) {
+            if (scalar(@DB::args) % 2 == 1 ) {
                 Carp::confess "arguments not allow excluding hash or hashref";
             }
-            $caller_args = {@args};
+            $caller_args = {@DB::args};
         }
     }
 
@@ -43,6 +42,29 @@ sub args {
 
     Internals::SvREADONLY %$caller_args, 1;
     $caller_args;
+}
+
+sub args_pos {
+    my $invocant = caller(0);
+    {
+        package DB;
+        () = caller(1);
+        shift @DB::args if $invocant eq $DB::args[0];
+    }
+    my @args = @DB::args;
+
+    my @expected;
+    for(my $i = 0; $i < @_; $i++){
+        if ($_[$i] && not defined $args[0]) {
+           Carp::confess "missing mandatory parameter. pos: $i"; 
+        }
+        $expected[$i] = shift @args;
+    }
+    if (scalar(@args) > 0) {
+        Carp::confess 'too much arguments. This function requires only ' . scalar(@_) . ' arguments.';
+    }
+
+    wantarray ? @expected : \@expected;
 }
 
 1;
@@ -76,6 +98,10 @@ Sub::Args - Simple check/get arguments.
       );
       $args->{email}; # die: email is not defined hash key.
   }
+  sub baz {
+      my $class = shift;
+      my ($var1, $var2) = args_pos(1,0);
+  }
   
   # got +{name => nekokak, age => undef}
   Your::Class->foo(
@@ -107,6 +133,8 @@ Sub::Args - Simple check/get arguments.
           age => 32,
       }
   );
+
+  Your::Class->baz('val1');
 
 or
 
@@ -157,6 +185,16 @@ This module makes your module more readable, and writable =p
 and restrict a argument's hash. =(
 
 When it accesses the key that doesn't exist, the exception is generated.
+
+=head1 FUNCTIONS
+
+=head2 my $hash_ref = args(\%rule, [@_]);
+
+Check parameter and return read only hash-ref.
+
+=head2 my @vals = args_pos(@rule);
+
+Check parameter and return array or array-ref.
 
 =head1 AUTHOR
 
